@@ -14,34 +14,46 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClockCounterClockwise, ArrowUp, ArrowDown, Clock, Check, Trash, Funnel, X } from "@phosphor-icons/react";
+import {
+  ClockCounterClockwiseIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  ClockIcon,
+  CheckIcon,
+  TrashIcon,
+  FunnelIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function HistoryPage() {
-  const { data: transactions, isLoading } = api.inventory.getAllTransactions.useQuery();
+  const { data: transactions, isLoading } =
+    api.inventory.getAllTransactions.useQuery();
   const { data: skus } = api.inventory.getAllSKUs.useQuery();
   const utils = api.useUtils();
 
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "addition" | "removal" | "pending">("all");
+  const [typeFilter, setTypeFilter] = useState<
+    "all" | "addition" | "removal" | "pending"
+  >("all");
 
   const patchTransaction = api.inventory.patchTransaction.useMutation({
     onSuccess: () => {
       utils.inventory.getAllTransactions.invalidate().catch(() => {});
       utils.inventory.getAllSKUs.invalidate().catch(() => {});
-      toast.success("Transaction confirmed as received!");
+      toast.success("Транзакція підтверджена!");
     },
-    onError: () => toast.error("Failed to confirm transaction"),
+    onError: () => toast.error("Не вдалося підтвердити транзакцію"),
   });
 
   const deleteTransaction = api.inventory.deleteTransaction.useMutation({
     onSuccess: () => {
       utils.inventory.getAllTransactions.invalidate().catch(() => {});
       utils.inventory.getAllSKUs.invalidate().catch(() => {});
-      toast.success("Transaction deleted!");
+      toast.success("Транзакція видалена!");
     },
-    onError: () => toast.error("Failed to delete transaction"),
+    onError: () => toast.error("Не вдалося видалити транзакцію"),
   });
 
   const confirmPending = (transactionId: number) => {
@@ -69,30 +81,30 @@ export default function HistoryPage() {
     switch (type) {
       case "addition":
         return {
-          label: "Added",
+          label: "Додано",
           variant: "default" as const,
-          icon: ArrowUp,
+          icon: ArrowUpIcon,
           color: "text-green-600",
         };
       case "removal":
         return {
-          label: "Removed",
+          label: "Спожито",
           variant: "destructive" as const,
-          icon: ArrowDown,
+          icon: ArrowDownIcon,
           color: "text-red-600",
         };
       case "pending":
         return {
-          label: "Pending",
+          label: "Очікується",
           variant: "secondary" as const,
-          icon: Clock,
+          icon: ClockIcon,
           color: "text-yellow-600",
         };
       default:
         return {
           label: type,
           variant: "outline" as const,
-          icon: ClockCounterClockwise,
+          icon: ClockCounterClockwiseIcon,
           color: "text-muted-foreground",
         };
     }
@@ -102,13 +114,15 @@ export default function HistoryPage() {
     const matchesType = typeFilter === "all" || tx.type === typeFilter;
     const skuName = getSkuName(tx.skuId).toLowerCase();
     const skuCode = getSkuCode(tx.skuId).toLowerCase();
-    const matchesSearch = search === "" || 
-      skuName.includes(search.toLowerCase()) || 
+    const matchesSearch =
+      search === "" ||
+      skuName.includes(search.toLowerCase()) ||
       skuCode.includes(search.toLowerCase());
     return matchesType && matchesSearch;
   });
 
-  const pendingCount = transactions?.filter((tx) => tx.type === "pending").length ?? 0;
+  const pendingCount =
+    transactions?.filter((tx) => tx.type === "pending").length ?? 0;
   const hasActiveFilters = typeFilter !== "all" || search !== "";
 
   const clearFilters = () => {
@@ -119,16 +133,16 @@ export default function HistoryPage() {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
-        <h1 className="text-xl font-bold">Transaction History</h1>
+        <h1 className="text-xl font-bold">Історія транзакцій</h1>
         <p className="text-muted-foreground text-sm">
-          View all inventory movements
+          Переглядайте всі переміщення інвентарю
         </p>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <Input
-          placeholder="Search by item or SKU..."
+          placeholder="Пошук за SKU..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="sm:max-w-xs"
@@ -139,20 +153,21 @@ export default function HistoryPage() {
             size="sm"
             onClick={() => setTypeFilter("all")}
           >
-            All
+            Всі
           </Button>
           <Button
             variant={typeFilter === "pending" ? "default" : "outline"}
             size="sm"
             onClick={() => setTypeFilter("pending")}
             className={cn(
-              typeFilter !== "pending" && "text-yellow-600 border-yellow-600/50 hover:bg-yellow-50"
+              typeFilter !== "pending" &&
+                "border-yellow-600/50 text-yellow-600 hover:bg-yellow-50",
             )}
           >
-            <Clock className="size-3 mr-1" />
-            Pending
+            <ClockIcon className="mr-1 size-3" />
+            Очікується
             {pendingCount > 0 && (
-              <Badge variant="secondary" className="ml-1.5 text-xs px-1.5">
+              <Badge variant="secondary" className="ml-1.5 px-1.5 text-xs">
                 {pendingCount}
               </Badge>
             )}
@@ -162,22 +177,24 @@ export default function HistoryPage() {
             size="sm"
             onClick={() => setTypeFilter("addition")}
             className={cn(
-              typeFilter !== "addition" && "text-green-600 border-green-600/50 hover:bg-green-50"
+              typeFilter !== "addition" &&
+                "border-green-600/50 text-green-600 hover:bg-green-50",
             )}
           >
-            <ArrowUp className="size-3 mr-1" />
-            Added
+            <ArrowUpIcon className="mr-1 size-3" />
+            Додано
           </Button>
           <Button
             variant={typeFilter === "removal" ? "default" : "outline"}
             size="sm"
             onClick={() => setTypeFilter("removal")}
             className={cn(
-              typeFilter !== "removal" && "text-red-600 border-red-600/50 hover:bg-red-50"
+              typeFilter !== "removal" &&
+                "border-red-600/50 text-red-600 hover:bg-red-50",
             )}
           >
-            <ArrowDown className="size-3 mr-1" />
-            Removed
+            <ArrowDownIcon className="mr-1 size-3" />
+            Спожито
           </Button>
           {hasActiveFilters && (
             <Button
@@ -186,8 +203,8 @@ export default function HistoryPage() {
               onClick={clearFilters}
               className="text-muted-foreground"
             >
-              <X className="size-3 mr-1" />
-              Clear
+              <XIcon className="mr-1 size-3" />
+              Очистити фільтри
             </Button>
           )}
         </div>
@@ -195,23 +212,30 @@ export default function HistoryPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <p className="text-muted-foreground">Loading transactions...</p>
+          <p className="text-muted-foreground">Завантаження транзакцій...</p>
         </div>
       ) : filteredTransactions?.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <ClockCounterClockwise className="size-12 text-muted-foreground mb-4" />
+            <ClockCounterClockwiseIcon className="text-muted-foreground mb-4 size-12" />
             <p className="text-muted-foreground">
-              {hasActiveFilters ? "No matching transactions" : "No transactions yet"}
+              {hasActiveFilters
+                ? "Не знайдено відповідних транзакцій"
+                : "Транзакцій ще немає"}
             </p>
             <p className="text-muted-foreground text-sm">
-              {hasActiveFilters 
-                ? "Try adjusting your filters"
-                : "Stock additions and removals will appear here"}
+              {hasActiveFilters
+                ? "Спробуйте змінити фільтри"
+                : "Додані та спожиті речі з'являться тут"}
             </p>
             {hasActiveFilters && (
-              <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
-                Clear filters
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={clearFilters}
+              >
+                Очистити фільтри
               </Button>
             )}
           </CardContent>
@@ -219,7 +243,7 @@ export default function HistoryPage() {
       ) : (
         <>
           {/* Mobile View */}
-          <div className="md:hidden space-y-3">
+          <div className="space-y-3 md:hidden">
             {filteredTransactions?.map((tx) => {
               const config = getTypeConfig(tx.type);
               const Icon = config.icon;
@@ -230,51 +254,60 @@ export default function HistoryPage() {
                       <div className="flex items-start gap-3">
                         <div
                           className={cn(
-                            "p-2 rounded-md bg-muted",
-                            config.color
+                            "bg-muted rounded-md p-2",
+                            config.color,
                           )}
                         >
                           <Icon className="size-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">
+                          <p className="truncate text-sm font-medium">
                             {getSkuName(tx.skuId)}
                           </p>
                           <p className="text-muted-foreground text-xs">
                             {getSkuCode(tx.skuId)}
                           </p>
-                          <p className="text-muted-foreground text-xs mt-1">
+                          <p className="text-muted-foreground mt-1 text-xs">
                             {formatDate(tx.timestamp)}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
+                      <div className="shrink-0 text-right">
                         <Badge variant={config.variant}>{config.label}</Badge>
-                        <p className={cn("text-lg font-bold mt-1", config.color)}>
-                          {tx.type === "addition" ? "+" : tx.type === "pending" ? "~" : "-"}{tx.quantity}
+                        <p
+                          className={cn("mt-1 text-lg font-bold", config.color)}
+                        >
+                          {tx.type === "addition"
+                            ? "+"
+                            : tx.type === "pending"
+                              ? "~"
+                              : "-"}
+                          {tx.quantity}
                         </p>
-                        <div className="flex gap-1 mt-2 justify-end">
+                        <div className="mt-2 flex justify-end gap-1">
                           {tx.type === "pending" && (
                             <Button
                               variant="outline"
                               size="icon-xs"
-                              className="text-green-600 border-green-600/50"
+                              className="border-green-600/50 text-green-600"
                               onClick={() => confirmPending(tx.id)}
                               disabled={patchTransaction.isPending}
                               title="Confirm as received"
                             >
-                              <Check className="size-3" />
+                              <CheckIcon className="size-3" />
                             </Button>
                           )}
                           <Button
                             variant="ghost"
                             size="icon-xs"
                             className="text-destructive"
-                            onClick={() => deleteTransaction.mutate({ id: tx.id })}
+                            onClick={() =>
+                              deleteTransaction.mutate({ id: tx.id })
+                            }
                             disabled={deleteTransaction.isPending}
                             title="Delete"
                           >
-                            <Trash className="size-3" />
+                            <TrashIcon className="size-3" />
                           </Button>
                         </div>
                       </div>
@@ -291,12 +324,12 @@ export default function HistoryPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
+                    <TableHead>Дата</TableHead>
                     <TableHead>SKU</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Назва</TableHead>
+                    <TableHead>Тип</TableHead>
+                    <TableHead className="text-right">Кількість</TableHead>
+                    <TableHead className="text-right">Дії</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -314,32 +347,41 @@ export default function HistoryPage() {
                         <TableCell>
                           <Badge variant={config.variant}>{config.label}</Badge>
                         </TableCell>
-                        <TableCell className={cn("text-right font-bold", config.color)}>
-                          {tx.type === "addition" ? "+" : tx.type === "pending" ? "~" : "-"}{tx.quantity}
+                        <TableCell
+                          className={cn("text-right font-bold", config.color)}
+                        >
+                          {tx.type === "addition"
+                            ? "+"
+                            : tx.type === "pending"
+                              ? "~"
+                              : "-"}
+                          {tx.quantity}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex gap-1 justify-end">
+                          <div className="flex justify-end gap-1">
                             {tx.type === "pending" && (
                               <Button
                                 variant="outline"
                                 size="icon-sm"
-                                className="text-green-600 border-green-600/50 hover:bg-green-50"
+                                className="border-green-600/50 text-green-600 hover:bg-green-50"
                                 onClick={() => confirmPending(tx.id)}
                                 disabled={patchTransaction.isPending}
                                 title="Confirm as received"
                               >
-                                <Check className="size-4" />
+                                <CheckIcon className="size-4" />
                               </Button>
                             )}
                             <Button
                               variant="ghost"
                               size="icon-sm"
                               className="text-destructive"
-                              onClick={() => deleteTransaction.mutate({ id: tx.id })}
+                              onClick={() =>
+                                deleteTransaction.mutate({ id: tx.id })
+                              }
                               disabled={deleteTransaction.isPending}
                               title="Delete"
                             >
-                              <Trash className="size-4" />
+                              <TrashIcon className="size-4" />
                             </Button>
                           </div>
                         </TableCell>

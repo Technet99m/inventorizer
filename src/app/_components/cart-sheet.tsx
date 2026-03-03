@@ -13,10 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  ShoppingCart,
-  Trash,
-  Plus,
-  Minus,
+  ShoppingCartIcon,
+  PlusIcon,
+  MinusIcon,
+  TrashIcon,
 } from "@phosphor-icons/react";
 import { api } from "@/trpc/react";
 import { toast } from "sonner";
@@ -84,10 +84,10 @@ export function CartSheet({ cart, setCart }: CartSheetProps) {
           })
         )
       );
-      toast.success("Items consumed successfully!");
+      toast.success("Речі успішно спожиті!");
       setCart([]);
     } catch {
-      toast.error("Failed to consume items");
+      toast.error("Не вдалося спожити речі");
     }
   };
 
@@ -97,8 +97,8 @@ export function CartSheet({ cart, setCart }: CartSheetProps) {
     <Sheet>
       <SheetTrigger asChild>
         <Button variant="outline" className="gap-2">
-          <ShoppingCart className="size-4" />
-          <span className="hidden sm:inline">Cart</span>
+          <ShoppingCartIcon className="size-4" />
+          <span className="hidden sm:inline">Кошик</span>
           {totalItems > 0 && (
             <Badge variant="default" className="ml-1">
               {totalItems}
@@ -108,16 +108,16 @@ export function CartSheet({ cart, setCart }: CartSheetProps) {
       </SheetTrigger>
       <SheetContent side="right" className="flex flex-col">
         <SheetHeader>
-          <SheetTitle>Consumption Cart</SheetTitle>
+          <SheetTitle>Кошик споживання</SheetTitle>
           <SheetDescription>
-            Add items to consume from inventory
+            Додайте речі для споживання з інвентарю
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto py-4">
           {cart.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              Your cart is empty
+              Ваш кошик порожній
             </p>
           ) : (
             <div className="space-y-4 px-4">
@@ -141,7 +141,7 @@ export function CartSheet({ cart, setCart }: CartSheetProps) {
                       size="icon-xs"
                       onClick={() => updateQuantity(item.skuId, -1)}
                     >
-                      <Minus className="size-3" />
+                      <MinusIcon className="size-3" />
                     </Button>
                     <Input
                       type="number"
@@ -159,7 +159,7 @@ export function CartSheet({ cart, setCart }: CartSheetProps) {
                       onClick={() => updateQuantity(item.skuId, 1)}
                       disabled={item.quantity >= item.maxQuantity}
                     >
-                      <Plus className="size-3" />
+                      <PlusIcon className="size-3" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -167,7 +167,7 @@ export function CartSheet({ cart, setCart }: CartSheetProps) {
                       onClick={() => removeFromCart(item.skuId)}
                       className="text-destructive"
                     >
-                      <Trash className="size-3" />
+                      <TrashIcon className="size-3" />
                     </Button>
                   </div>
                 </div>
@@ -179,7 +179,7 @@ export function CartSheet({ cart, setCart }: CartSheetProps) {
         <SheetFooter className="border-t border-border">
           <div className="w-full space-y-4">
             <div className="flex items-center justify-between text-sm">
-              <span>Total items:</span>
+              <span>Всього речей:</span>
               <span className="font-bold">{totalItems}</span>
             </div>
             <Button
@@ -187,7 +187,7 @@ export function CartSheet({ cart, setCart }: CartSheetProps) {
               disabled={cart.length === 0 || addTransaction.isPending}
               onClick={consumeCart}
             >
-              {addTransaction.isPending ? "Consuming..." : "Consume Items"}
+              {addTransaction.isPending ? "Споживання..." : "Спожити речі"}
             </Button>
           </div>
         </SheetFooter>

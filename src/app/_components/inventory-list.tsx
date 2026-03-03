@@ -10,7 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Minus, Warning } from "@phosphor-icons/react";
+import { PlusIcon, WarningIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
@@ -70,7 +70,7 @@ export function InventoryList({ cart, setCart }: InventoryListProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Loading inventory...</p>
+        <p className="text-muted-foreground">Завантаження інвентарю...</p>
       </div>
     );
   }
@@ -78,7 +78,7 @@ export function InventoryList({ cart, setCart }: InventoryListProps) {
   return (
     <div className="space-y-4">
       <Input
-        placeholder="Search items..."
+        placeholder="Пошук речей..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="max-w-sm"
@@ -86,7 +86,7 @@ export function InventoryList({ cart, setCart }: InventoryListProps) {
 
       {filteredSkus?.length === 0 && (
         <p className="text-muted-foreground text-center py-8">
-          No items found. Add some SKUs first!
+          Не знайдено жодної речі, що відповідає пошуку.
         </p>
       )}
 
@@ -121,13 +121,13 @@ export function InventoryList({ cart, setCart }: InventoryListProps) {
                   </div>
                   {isLow && !isOutOfStock && (
                     <Badge variant="outline" className="shrink-0 text-yellow-600 border-yellow-600/50">
-                      <Warning className="size-3 mr-1" />
-                      Low
+                      <WarningIcon className="size-3 mr-1" />
+                      Мало
                     </Badge>
                   )}
                   {isOutOfStock && (
                     <Badge variant="destructive" className="shrink-0">
-                      Out
+                      Немає в наявності
                     </Badge>
                   )}
                 </div>
@@ -136,11 +136,11 @@ export function InventoryList({ cart, setCart }: InventoryListProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-2xl font-bold">{sku.quantity}</p>
-                    <p className="text-muted-foreground text-xs">in stock</p>
+                    <p className="text-muted-foreground text-xs">в наявності</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {cartQty > 0 && (
-                      <Badge variant="secondary">{cartQty} in cart</Badge>
+                      <Badge variant="secondary">{cartQty} в кошику</Badge>
                     )}
                     <Button
                       variant="outline"
@@ -148,14 +148,14 @@ export function InventoryList({ cart, setCart }: InventoryListProps) {
                       disabled={availableQty <= 0}
                       onClick={() => addToCart(sku)}
                     >
-                      <Plus className="size-4" />
+                      <PlusIcon className="size-4" />
                     </Button>
                   </div>
                 </div>
                 {sku.pending > 0 && (
                   <div className="flex items-center gap-1 mt-2 text-yellow-600">
                     <span className="text-xs font-medium">
-                      +{sku.pending} pending
+                      +{sku.pending} очікується
                     </span>
                   </div>
                 )}

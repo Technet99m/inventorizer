@@ -28,12 +28,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={jetbrainsMono.variable}>
+    <html lang="uk" className={jetbrainsMono.variable}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
       >
         <TRPCReactProvider>
-          <div className="min-h-screen flex flex-col">
+          <div className="min-h-screen flex flex-col pb-25">
             <Navigation />
             <main className="flex-1">
               {children}

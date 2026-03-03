@@ -19,15 +19,19 @@ export default function InventoryPage() {
     <div className="container mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold">Inventory</h1>
+          <h1 className="text-xl font-bold">Інвентар</h1>
           <p className="text-muted-foreground text-sm">
-            View stock levels and consume items
+            Перегляд рівнів запасів та споживання речей
           </p>
         </div>
         <CartSheet cart={cart} setCart={setCart} />
       </div>
 
       <InventoryList cart={cart} setCart={setCart} />
+
+      <div className="fixed bottom-4 right-4 z-50">
+        <CartSheet cart={cart} setCart={setCart} />
+      </div>
     </div>
   );
 }

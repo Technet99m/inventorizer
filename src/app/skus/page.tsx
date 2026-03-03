@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Pencil, Trash, Package, Clock } from "@phosphor-icons/react";
+import { PlusIcon, PencilIcon, TrashIcon, ClockIcon, PackageIcon } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
@@ -69,9 +69,9 @@ export default function SKUsPage() {
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl font-bold">Manage SKUs</h1>
+          <h1 className="text-xl font-bold">Керування SKU</h1>
           <p className="text-muted-foreground text-sm">
-            Add, edit, or remove inventory items
+            Додайте, редагуйте або видаляйте елементи інвентарю
           </p>
         </div>
         <AddSKUDialog onAdd={(data) => addSKU.mutate(data)} isPending={addSKU.isPending} />
@@ -79,14 +79,14 @@ export default function SKUsPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <p className="text-muted-foreground">Loading SKUs...</p>
+          <p className="text-muted-foreground">Завантаження SKU...</p>
         </div>
       ) : skus?.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="size-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No SKUs found</p>
-            <p className="text-muted-foreground text-sm">Create your first SKU to get started</p>
+            <PackageIcon className="size-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">SKU не знайдено</p>
+            <p className="text-muted-foreground text-sm">Створіть свій перший SKU, щоб почати</p>
           </CardContent>
         </Card>
       ) : (
@@ -183,7 +183,7 @@ export default function SKUsPage() {
                       <TableCell className="text-right">
                         {sku.pending > 0 ? (
                           <Badge variant="secondary" className="text-yellow-600">
-                            <Clock className="size-3 mr-1" />
+                            <ClockIcon className="size-3 mr-1" />
                             {sku.pending}
                           </Badge>
                         ) : (
@@ -266,16 +266,16 @@ function AddSKUDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="gap-2">
-          <Plus className="size-4" />
-          <span className="hidden sm:inline">Add SKU</span>
+          <PlusIcon className="size-4" />
+          <span className="hidden sm:inline">Додати SKU</span>
         </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add New SKU</DialogTitle>
+            <DialogTitle>Додати новий SKU</DialogTitle>
             <DialogDescription>
-              Create a new inventory item
+              Створіть новий елемент інвентарю
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -359,15 +359,15 @@ function EditSKUDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon-sm">
-          <Pencil className="size-4" />
+          <PencilIcon className="size-4" />
         </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Edit SKU</DialogTitle>
+            <DialogTitle>Редагувати SKU</DialogTitle>
             <DialogDescription>
-              Update item details
+              Оновіть деталі елемента
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -436,19 +436,19 @@ function DeleteSKUDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon-sm" className="text-destructive">
-          <Trash className="size-4" />
+          <TrashIcon className="size-4" />
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete SKU</DialogTitle>
+          <DialogTitle>Видалити SKU</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete &quot;{sku.name}&quot;? This action cannot be undone.
+            Ви впевнені, що хочете видалити &quot;{sku.name}&quot;? Цю дію не можна скасувати.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline">Скасувати</Button>
           </DialogClose>
           <Button
             variant="destructive"
@@ -458,7 +458,7 @@ function DeleteSKUDialog({
             }}
             disabled={isPending}
           >
-            {isPending ? "Deleting..." : "Delete"}
+            {isPending ? "Видалення..." : "Видалити"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -489,21 +489,21 @@ function AddStockDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1">
-          <Plus className="size-3" />
-          Stock
+          <PlusIcon className="size-3" />
+          Додати запас
         </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add Stock</DialogTitle>
+            <DialogTitle>Додати запас</DialogTitle>
             <DialogDescription>
-              Add inventory for &quot;{sku.name}&quot;
+              Додати інвентар для &quot;{sku.name}&quot;
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity</Label>
+              <Label htmlFor="quantity">Кількість</Label>
               <Input
                 id="quantity"
                 type="number"
@@ -516,7 +516,7 @@ function AddStockDialog({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Adding..." : "Add Stock"}
+              {isPending ? "Додавання..." : "Додати запас"}
             </Button>
           </DialogFooter>
         </form>
@@ -548,21 +548,21 @@ function AddPendingDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1 text-yellow-600 border-yellow-600/50 hover:bg-yellow-50">
-          <Clock className="size-3" />
-          Pending
+          <ClockIcon className="size-3" />
+          Очікування
         </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add Pending Stock</DialogTitle>
+            <DialogTitle>Додати очікуваний запас</DialogTitle>
             <DialogDescription>
-              Add pending inventory for &quot;{sku.name}&quot;. This stock is expected but not yet received.
+              Додати очікуваний інвентар для &quot;{sku.name}&quot;. Цей запас очікується, але ще не отриманий.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="pending-quantity">Quantity</Label>
+              <Label htmlFor="pending-quantity">Кількість</Label>
               <Input
                 id="pending-quantity"
                 type="number"
@@ -575,7 +575,7 @@ function AddPendingDialog({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isPending} className="bg-yellow-600 hover:bg-yellow-700">
-              {isPending ? "Adding..." : "Add Pending"}
+              {isPending ? "Додавання..." : "Додати очікуваний запас"}
             </Button>
           </DialogFooter>
         </form>

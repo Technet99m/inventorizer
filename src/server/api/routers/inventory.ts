@@ -11,7 +11,9 @@ function quantityDelta(type: string, quantity: number): number {
 
 export const inventoryRouter = createTRPCRouter({
     getAllSKUs: publicProcedure.query(async ({ ctx }) => {
-        const skus = await ctx.db.query.skuTable.findMany();
+        const skus = await ctx.db.query.skuTable.findMany({
+            orderBy: (skuTable, { asc }) => [asc(skuTable.sku), asc(skuTable.id)],
+        });
         const pendingTransactions = await ctx.db.query.transactionsTable.findMany({
             where: (t, { eq }) => eq(t.type, "pending"),
         });

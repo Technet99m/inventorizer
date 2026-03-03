@@ -12,17 +12,17 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-  Package,
-  ClockCounterClockwise,
-  ListPlus,
-  List,
+  PackageIcon,
+  ClockCounterClockwiseIcon,
+  ListPlusIcon,
+  ListIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 
 const navItems = [
-  { href: "/", label: "Inventory", icon: Package },
-  { href: "/skus", label: "Manage SKUs", icon: ListPlus },
-  { href: "/history", label: "History", icon: ClockCounterClockwise },
+  { href: "/", label: "Інвентар", icon: PackageIcon },
+  { href: "/skus", label: "Керування SKU", icon: ListPlusIcon },
+  { href: "/history", label: "Історія", icon: ClockCounterClockwiseIcon },
 ];
 
 export function Navigation() {
@@ -65,12 +65,12 @@ export function Navigation() {
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon-sm">
-                <List className="size-5" />
+                <ListIcon className="size-5" />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-64">
               <SheetHeader>
-                <SheetTitle>Menu</SheetTitle>
+                <SheetTitle>Меню</SheetTitle>
               </SheetHeader>
               <div className="flex flex-col gap-2 mt-4 px-4">
                 {navItems.map((item) => (

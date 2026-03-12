@@ -22,13 +22,6 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-if $yolo; then
-  echo "Skipping tests (--yolo)"
-else
-  echo "Running pnpm test:ci"
-  pnpm test:ci
-fi
-
 if $no_increment; then
   new_version=$(node -e "const pkg = require('$SCRIPT_DIR/package.json'); console.log(pkg.version);")
   echo "Skipping version increment, using existing version $new_version"

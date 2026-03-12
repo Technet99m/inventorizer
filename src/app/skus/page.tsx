@@ -24,9 +24,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusIcon, PencilIcon, TrashIcon, ClockIcon, PackageIcon } from "@phosphor-icons/react";
+import { PlusIcon, PencilIcon, TrashIcon, ClockIcon, PackageIcon, MinusIcon, WarningIcon } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export default function SKUsPage() {
   const { data: skus, isLoading } = api.inventory.getAllSKUs.useQuery();
@@ -93,11 +94,23 @@ export default function SKUsPage() {
         <>
           {/* Mobile View */}
           <div className="md:hidden space-y-4">
-            {skus?.map((sku) => (
-              <Card key={sku.id}>
+            {skus?.map((sku) => {
+              const isLow = sku.quantity <= sku.minThreshold && sku.minThreshold > 0;
+              const isOutOfStock = sku.quantity <= 0;
+              return (
+              <Card key={sku.id} className={cn(isLow && !isOutOfStock && "ring-2 ring-yellow-500/50", isOutOfStock && "ring-2 ring-destructive/50")}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center justify-between">
+                  <CardTitle className="flex items-center justify-between gap-2">
                     <span className="truncate">{sku.name}</span>
+                    {isLow && !isOutOfStock && (
+                      <Badge variant="outline" className="shrink-0 text-yellow-600 border-yellow-600/50">
+                        <WarningIcon className="size-3 mr-1" />
+                        Мало
+                      </Badge>
+                    )}
+                    {isOutOfStock && (
+                      <Badge variant="destructive" className="shrink-0">Немає</Badge>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -108,7 +121,7 @@ export default function SKUsPage() {
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Stock</p>
-                      <p className="font-bold">{sku.quantity}</p>
+                      <p className={cn("font-bold", isOutOfStock && "text-destructive", isLow && !isOutOfStock && "text-yellow-600")}>{sku.quantity}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Min Threshold</p>
@@ -122,6 +135,17 @@ export default function SKUsPage() {
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <ConsumeDialog
+                      sku={sku}
+                      onConsume={(qty) =>
+                        addTransaction.mutate({
+                          skuId: sku.id,
+                          quantity: qty,
+                          type: "removal",
+                        })
+                      }
+                      isPending={addTransaction.isPending}
+                    />
                     <AddStockDialog
                       sku={sku}
                       onAdd={(qty) =>
@@ -157,7 +181,8 @@ export default function SKUsPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
 
           {/* Desktop View */}
@@ -175,11 +200,29 @@ export default function SKUsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {skus?.map((sku) => (
-                    <TableRow key={sku.id}>
+                  {skus?.map((sku) => {
+                    const isLow = sku.quantity <= sku.minThreshold && sku.minThreshold > 0;
+                    const isOutOfStock = sku.quantity <= 0;
+                    return (
+                    <TableRow key={sku.id} className={cn(isOutOfStock && "bg-destructive/5", isLow && !isOutOfStock && "bg-yellow-500/5")}>
                       <TableCell className="font-mono">{sku.sku}</TableCell>
                       <TableCell>{sku.name}</TableCell>
-                      <TableCell className="text-right font-bold">{sku.quantity}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {isLow && !isOutOfStock && (
+                            <Badge variant="outline" className="text-yellow-600 border-yellow-600/50">
+                              <WarningIcon className="size-3 mr-1" />
+                              Мало
+                            </Badge>
+                          )}
+                          {isOutOfStock && (
+                            <Badge variant="destructive">Немає</Badge>
+                          )}
+                          <span className={cn("font-bold", isOutOfStock && "text-destructive", isLow && !isOutOfStock && "text-yellow-600")}>
+                            {sku.quantity}
+                          </span>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right">
                         {sku.pending > 0 ? (
                           <Badge variant="secondary" className="text-yellow-600">
@@ -193,6 +236,17 @@ export default function SKUsPage() {
                       <TableCell className="text-right">{sku.minThreshold}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <ConsumeDialog
+                            sku={sku}
+                            onConsume={(qty) =>
+                              addTransaction.mutate({
+                                skuId: sku.id,
+                                quantity: qty,
+                                type: "removal",
+                              })
+                            }
+                            isPending={addTransaction.isPending}
+                          />
                           <AddStockDialog
                             sku={sku}
                             onAdd={(qty) =>
@@ -228,7 +282,8 @@ export default function SKUsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </Card>
@@ -461,6 +516,66 @@ function DeleteSKUDialog({
             {isPending ? "Видалення..." : "Видалити"}
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ConsumeDialog({
+  sku,
+  onConsume,
+  isPending,
+}: {
+  sku: { id: number; name: string; quantity: number };
+  onConsume: (quantity: number) => void;
+  isPending: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onConsume(quantity);
+    setQuantity(1);
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1 text-destructive border-destructive/50 hover:bg-destructive/10" disabled={sku.quantity <= 0}>
+          <MinusIcon className="size-3" />
+          Спожити
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Спожити запас</DialogTitle>
+            <DialogDescription>
+              Зареєструйте споживання &quot;{sku.name}&quot;. Доступно: {sku.quantity}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="consume-quantity">Кількість</Label>
+              <Input
+                id="consume-quantity"
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                min={1}
+                max={sku.quantity}
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" variant="destructive" disabled={isPending}>
+              {isPending ? "Збереження..." : "Спожити"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

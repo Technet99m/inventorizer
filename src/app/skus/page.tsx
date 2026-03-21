@@ -24,14 +24,46 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusIcon, PencilIcon, TrashIcon, ClockIcon, PackageIcon, MinusIcon, WarningIcon } from "@phosphor-icons/react";
+import { PlusIcon, PencilIcon, TrashIcon, ClockIcon, PackageIcon, MinusIcon, WarningIcon, DotsSixVerticalIcon } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+type SKUWithPending = {
+  id: number;
+  sku: string;
+  name: string;
+  quantity: number;
+  minThreshold: number;
+  thumbnailUrl?: string | null;
+  sortOrder: number;
+  pending: number;
+};
 
 export default function SKUsPage() {
   const { data: skus, isLoading } = api.inventory.getAllSKUs.useQuery();
   const utils = api.useUtils();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+  );
 
   const addSKU = api.inventory.addSKU.useMutation({
     onSuccess: () => {
@@ -66,6 +98,35 @@ export default function SKUsPage() {
     onError: () => toast.error("Failed to update stock"),
   });
 
+  const reorderSKUs = api.inventory.reorderSKUs.useMutation({
+    onMutate: async (newOrder) => {
+      await utils.inventory.getAllSKUs.cancel();
+      const prev = utils.inventory.getAllSKUs.getData();
+      utils.inventory.getAllSKUs.setData(undefined, (old) => {
+        if (!old) return old;
+        return newOrder
+          .map(({ id }) => old.find((s) => s.id === id))
+          .filter((s) => s !== undefined);
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) utils.inventory.getAllSKUs.setData(undefined, ctx.prev);
+      toast.error("Failed to reorder");
+    },
+    onSettled: () => utils.inventory.getAllSKUs.invalidate().catch(() => {}),
+  });
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (!skus) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = skus.findIndex((s) => s.id === active.id);
+    const newIndex = skus.findIndex((s) => s.id === over.id);
+    const newOrder = arrayMove(skus, oldIndex, newIndex);
+    reorderSKUs.mutate(newOrder.map((sku, i) => ({ id: sku.id, sortOrder: i })));
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -90,100 +151,29 @@ export default function SKUsPage() {
             <p className="text-muted-foreground text-sm">Створіть свій перший SKU, щоб почати</p>
           </CardContent>
         </Card>
-      ) : (
+      ) : skus ? (
         <>
           {/* Mobile View */}
-          <div className="md:hidden space-y-4">
-            {skus?.map((sku) => {
-              const isLow = sku.quantity <= sku.minThreshold && sku.minThreshold > 0;
-              const isOutOfStock = sku.quantity <= 0;
-              return (
-              <Card key={sku.id} className={cn(isLow && !isOutOfStock && "ring-2 ring-yellow-500/50", isOutOfStock && "ring-2 ring-destructive/50")}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center justify-between gap-2">
-                    <span className="truncate">{sku.name}</span>
-                    {isLow && !isOutOfStock && (
-                      <Badge variant="outline" className="shrink-0 text-yellow-600 border-yellow-600/50">
-                        <WarningIcon className="size-3 mr-1" />
-                        Мало
-                      </Badge>
-                    )}
-                    {isOutOfStock && (
-                      <Badge variant="destructive" className="shrink-0">Немає</Badge>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs">SKU</p>
-                      <p className="font-mono">{sku.sku}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Stock</p>
-                      <p className={cn("font-bold", isOutOfStock && "text-destructive", isLow && !isOutOfStock && "text-yellow-600")}>{sku.quantity}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Min Threshold</p>
-                      <p>{sku.minThreshold}</p>
-                    </div>
-                    {sku.pending > 0 && (
-                      <div>
-                        <p className="text-muted-foreground text-xs">Pending</p>
-                        <p className="text-yellow-600 font-medium">{sku.pending}</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <ConsumeDialog
-                      sku={sku}
-                      onConsume={(qty) =>
-                        addTransaction.mutate({
-                          skuId: sku.id,
-                          quantity: qty,
-                          type: "removal",
-                        })
-                      }
-                      isPending={addTransaction.isPending}
-                    />
-                    <AddStockDialog
-                      sku={sku}
-                      onAdd={(qty) =>
-                        addTransaction.mutate({
-                          skuId: sku.id,
-                          quantity: qty,
-                          type: "addition",
-                        })
-                      }
-                      isPending={addTransaction.isPending}
-                    />
-                    <AddPendingDialog
-                      sku={sku}
-                      onAdd={(qty) =>
-                        addTransaction.mutate({
-                          skuId: sku.id,
-                          quantity: qty,
-                          type: "pending",
-                        })
-                      }
-                      isPending={addTransaction.isPending}
-                    />
-                    <EditSKUDialog
-                      sku={sku}
-                      onEdit={(data) => patchSKU.mutate({ id: sku.id, ...data })}
-                      isPending={patchSKU.isPending}
-                    />
-                    <DeleteSKUDialog
-                      sku={sku}
-                      onDelete={() => deleteSKU.mutate({ id: sku.id })}
-                      isPending={deleteSKU.isPending}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-              );
-            })}
-          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={skus.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+              <div className="md:hidden space-y-4">
+                {skus.map((sku) => (
+                  <SortableMobileCard
+                    key={sku.id}
+                    sku={sku}
+                    onConsume={(qty) => addTransaction.mutate({ skuId: sku.id, quantity: qty, type: "removal" })}
+                    onAddStock={(qty) => addTransaction.mutate({ skuId: sku.id, quantity: qty, type: "addition" })}
+                    onAddPending={(qty) => addTransaction.mutate({ skuId: sku.id, quantity: qty, type: "pending" })}
+                    onEdit={(data) => patchSKU.mutate({ id: sku.id, ...data })}
+                    onDelete={() => deleteSKU.mutate({ id: sku.id })}
+                    isTransactionPending={addTransaction.isPending}
+                    isPatchPending={patchSKU.isPending}
+                    isDeletePending={deleteSKU.isPending}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
 
           {/* Desktop View */}
           <div className="hidden md:block">
@@ -191,6 +181,7 @@ export default function SKUsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8"></TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead className="text-right">Stock</TableHead>
@@ -199,98 +190,174 @@ export default function SKUsPage() {
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {skus?.map((sku) => {
-                    const isLow = sku.quantity <= sku.minThreshold && sku.minThreshold > 0;
-                    const isOutOfStock = sku.quantity <= 0;
-                    return (
-                    <TableRow key={sku.id} className={cn(isOutOfStock && "bg-destructive/5", isLow && !isOutOfStock && "bg-yellow-500/5")}>
-                      <TableCell className="font-mono">{sku.sku}</TableCell>
-                      <TableCell>{sku.name}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {isLow && !isOutOfStock && (
-                            <Badge variant="outline" className="text-yellow-600 border-yellow-600/50">
-                              <WarningIcon className="size-3 mr-1" />
-                              Мало
-                            </Badge>
-                          )}
-                          {isOutOfStock && (
-                            <Badge variant="destructive">Немає</Badge>
-                          )}
-                          <span className={cn("font-bold", isOutOfStock && "text-destructive", isLow && !isOutOfStock && "text-yellow-600")}>
-                            {sku.quantity}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {sku.pending > 0 ? (
-                          <Badge variant="secondary" className="text-yellow-600">
-                            <ClockIcon className="size-3 mr-1" />
-                            {sku.pending}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">{sku.minThreshold}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <ConsumeDialog
-                            sku={sku}
-                            onConsume={(qty) =>
-                              addTransaction.mutate({
-                                skuId: sku.id,
-                                quantity: qty,
-                                type: "removal",
-                              })
-                            }
-                            isPending={addTransaction.isPending}
-                          />
-                          <AddStockDialog
-                            sku={sku}
-                            onAdd={(qty) =>
-                              addTransaction.mutate({
-                                skuId: sku.id,
-                                quantity: qty,
-                                type: "addition",
-                              })
-                            }
-                            isPending={addTransaction.isPending}
-                          />
-                          <AddPendingDialog
-                            sku={sku}
-                            onAdd={(qty) =>
-                              addTransaction.mutate({
-                                skuId: sku.id,
-                                quantity: qty,
-                                type: "pending",
-                              })
-                            }
-                            isPending={addTransaction.isPending}
-                          />
-                          <EditSKUDialog
-                            sku={sku}
-                            onEdit={(data) => patchSKU.mutate({ id: sku.id, ...data })}
-                            isPending={patchSKU.isPending}
-                          />
-                          <DeleteSKUDialog
-                            sku={sku}
-                            onDelete={() => deleteSKU.mutate({ id: sku.id })}
-                            isPending={deleteSKU.isPending}
-                          />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    );
-                  })}
-                </TableBody>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={skus.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+                    <TableBody>
+                      {skus.map((sku) => (
+                        <SortableTableRow
+                          key={sku.id}
+                          sku={sku}
+                          onConsume={(qty) => addTransaction.mutate({ skuId: sku.id, quantity: qty, type: "removal" })}
+                          onAddStock={(qty) => addTransaction.mutate({ skuId: sku.id, quantity: qty, type: "addition" })}
+                          onAddPending={(qty) => addTransaction.mutate({ skuId: sku.id, quantity: qty, type: "pending" })}
+                          onEdit={(data) => patchSKU.mutate({ id: sku.id, ...data })}
+                          onDelete={() => deleteSKU.mutate({ id: sku.id })}
+                          isTransactionPending={addTransaction.isPending}
+                          isPatchPending={patchSKU.isPending}
+                          isDeletePending={deleteSKU.isPending}
+                        />
+                      ))}
+                    </TableBody>
+                  </SortableContext>
+                </DndContext>
               </Table>
             </Card>
           </div>
         </>
-      )}
+      ) : null}
     </div>
+  );
+}
+
+type SKURowProps = {
+  sku: SKUWithPending;
+  onConsume: (qty: number) => void;
+  onAddStock: (qty: number) => void;
+  onAddPending: (qty: number) => void;
+  onEdit: (data: { sku?: string; name?: string; minThreshold?: number; thumbnailUrl?: string }) => void;
+  onDelete: () => void;
+  isTransactionPending: boolean;
+  isPatchPending: boolean;
+  isDeletePending: boolean;
+};
+
+function SortableMobileCard({ sku, ...props }: SKURowProps) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: sku.id });
+  const isLow = sku.quantity <= sku.minThreshold && sku.minThreshold > 0;
+  const isOutOfStock = sku.quantity <= 0;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : undefined }}
+    >
+      <Card className={cn(isLow && !isOutOfStock && "ring-2 ring-yellow-500/50", isOutOfStock && "ring-2 ring-destructive/50")}>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2">
+            <button
+              ref={setActivatorNodeRef}
+              {...listeners}
+              {...attributes}
+              className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground shrink-0"
+            >
+              <DotsSixVerticalIcon className="size-5" />
+            </button>
+            <span className="truncate flex-1">{sku.name}</span>
+            {isLow && !isOutOfStock && (
+              <Badge variant="outline" className="shrink-0 text-yellow-600 border-yellow-600/50">
+                <WarningIcon className="size-3 mr-1" />
+                Мало
+              </Badge>
+            )}
+            {isOutOfStock && (
+              <Badge variant="destructive" className="shrink-0">Немає</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <p className="text-muted-foreground text-xs">SKU</p>
+              <p className="font-mono">{sku.sku}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs">Stock</p>
+              <p className={cn("font-bold", isOutOfStock && "text-destructive", isLow && !isOutOfStock && "text-yellow-600")}>{sku.quantity}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs">Min Threshold</p>
+              <p>{sku.minThreshold}</p>
+            </div>
+            {sku.pending > 0 && (
+              <div>
+                <p className="text-muted-foreground text-xs">Pending</p>
+                <p className="text-yellow-600 font-medium">{sku.pending}</p>
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <ConsumeDialog sku={sku} onConsume={props.onConsume} isPending={props.isTransactionPending} />
+            <AddStockDialog sku={sku} onAdd={props.onAddStock} isPending={props.isTransactionPending} />
+            <AddPendingDialog sku={sku} onAdd={props.onAddPending} isPending={props.isTransactionPending} />
+            <EditSKUDialog sku={sku} onEdit={props.onEdit} isPending={props.isPatchPending} />
+            <DeleteSKUDialog sku={sku} onDelete={props.onDelete} isPending={props.isDeletePending} />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function SortableTableRow({ sku, ...props }: SKURowProps) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: sku.id });
+  const isLow = sku.quantity <= sku.minThreshold && sku.minThreshold > 0;
+  const isOutOfStock = sku.quantity <= 0;
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : undefined }}
+      className={cn(isOutOfStock && "bg-destructive/5", isLow && !isOutOfStock && "bg-yellow-500/5")}
+    >
+      <TableCell>
+        <button
+          ref={setActivatorNodeRef}
+          {...listeners}
+          {...attributes}
+          className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground"
+        >
+          <DotsSixVerticalIcon className="size-4" />
+        </button>
+      </TableCell>
+      <TableCell className="font-mono">{sku.sku}</TableCell>
+      <TableCell>{sku.name}</TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-2">
+          {isLow && !isOutOfStock && (
+            <Badge variant="outline" className="text-yellow-600 border-yellow-600/50">
+              <WarningIcon className="size-3 mr-1" />
+              Мало
+            </Badge>
+          )}
+          {isOutOfStock && (
+            <Badge variant="destructive">Немає</Badge>
+          )}
+          <span className={cn("font-bold", isOutOfStock && "text-destructive", isLow && !isOutOfStock && "text-yellow-600")}>
+            {sku.quantity}
+          </span>
+        </div>
+      </TableCell>
+      <TableCell className="text-right">
+        {sku.pending > 0 ? (
+          <Badge variant="secondary" className="text-yellow-600">
+            <ClockIcon className="size-3 mr-1" />
+            {sku.pending}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="text-right">{sku.minThreshold}</TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-2">
+          <ConsumeDialog sku={sku} onConsume={props.onConsume} isPending={props.isTransactionPending} />
+          <AddStockDialog sku={sku} onAdd={props.onAddStock} isPending={props.isTransactionPending} />
+          <AddPendingDialog sku={sku} onAdd={props.onAddPending} isPending={props.isTransactionPending} />
+          <EditSKUDialog sku={sku} onEdit={props.onEdit} isPending={props.isPatchPending} />
+          <DeleteSKUDialog sku={sku} onDelete={props.onDelete} isPending={props.isDeletePending} />
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }
 

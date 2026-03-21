@@ -20,8 +20,9 @@ export const skuTable = pgTable(
     name: varchar("name", { length: 256 }).notNull(),
     minThreshold: integer("min_threshold").notNull().default(0),
     quantity: integer("quantity").notNull().default(0),
+    sortOrder: integer("sort_order").notNull().default(0),
   },
-  (table) => [index("skus_sku_idx").on(table.sku)],
+  (table) => [index("skus_sku_idx").on(table.sku), index("skus_sort_order_idx").on(table.sortOrder)],
 );
 export const transactionsTable = pgTable("transactions", {
   id: serial("id").primaryKey(),

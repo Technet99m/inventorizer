@@ -1,7 +1,7 @@
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { z } from "zod";
 import { skuTable, transactionsTable } from "@/server/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, max } from "drizzle-orm";
 
 function quantityDelta(type: string, quantity: number): number {
     if (type === "addition") return quantity;
@@ -12,7 +12,7 @@ function quantityDelta(type: string, quantity: number): number {
 export const inventoryRouter = createTRPCRouter({
     getAllSKUs: publicProcedure.query(async ({ ctx }) => {
         const skus = await ctx.db.query.skuTable.findMany({
-            orderBy: (skuTable, { asc }) => [asc(skuTable.sku), asc(skuTable.id)],
+            orderBy: (skuTable, { asc }) => [asc(skuTable.sortOrder), asc(skuTable.id)],
         });
         const pendingTransactions = await ctx.db.query.transactionsTable.findMany({
             where: (t, { eq }) => eq(t.type, "pending"),
@@ -43,8 +43,19 @@ export const inventoryRouter = createTRPCRouter({
             minThreshold: z.number().int().default(0),
         }))
         .mutation(async ({ ctx, input }) => {
-            const result = await ctx.db.insert(skuTable).values(input).returning();
+            const [maxRow] = await ctx.db.select({ value: max(skuTable.sortOrder) }).from(skuTable);
+            const nextOrder = (maxRow?.value ?? -1) + 1;
+            const result = await ctx.db.insert(skuTable).values({ ...input, sortOrder: nextOrder }).returning();
             return result[0];
+        }),
+    reorderSKUs: publicProcedure
+        .input(z.array(z.object({ id: z.number().int(), sortOrder: z.number().int() })))
+        .mutation(async ({ ctx, input }) => {
+            await Promise.all(
+                input.map(({ id, sortOrder }) =>
+                    ctx.db.update(skuTable).set({ sortOrder }).where(eq(skuTable.id, id))
+                )
+            );
         }),
     addTransaction: publicProcedure
         .input(z.object({
